@@ -1,0 +1,119 @@
+---
+title: "Running non-Node.js scripts"
+description: "Use nodemon to run and watch Python, Ruby, and other language scripts with the --exec flag and execMap configuration."
+---
+
+nodemon is not limited to Node.js. You can use it to run and monitor any executable — Python scripts, Ruby programs, shell scripts, and more.
+
+## Using the `--exec` flag
+
+The `--exec` flag tells nodemon to run your script with a specific executable instead of `node`. When you pass `--exec`, nodemon also detects the file extension of your script and watches for that extension automatically.
+
+```bash
+nodemon --exec "python -v" ./app.py
+```
+
+This starts `app.py` with Python in verbose mode and monitors all `.py` files for changes.
+
+If the executable you're running doesn't require extra arguments, you can omit the quotes:
+
+```bash
+nodemon --exec python app.py
+```
+
+### Watching all file types
+
+To watch every file type in a directory, pass `'*'` to `--ext`:
+
+```bash
+nodemon --ext '*' --watch public --exec 'python -m SimpleHTTPServer'
+```
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    # With arguments (use quotes)
+    nodemon --exec "python -v" ./app.py
+
+    # Without arguments
+    nodemon --exec python app.py
+
+    # Watch all files in public/, serve with SimpleHTTPServer
+    nodemon --ext '*' --watch public --exec 'python -m SimpleHTTPServer'
+    ```
+  </Tab>
+  <Tab title="Ruby">
+    ```bash
+    nodemon --exec ruby app.rb
+    ```
+
+    Or add Ruby to your `nodemon.json` via `execMap` (see below) and simply run:
+
+    ```bash
+    nodemon app.rb
+    ```
+  </Tab>
+  <Tab title="Other languages">
+    ```bash
+    # Perl
+    nodemon --exec perl script.pl
+
+    # Processing
+    nodemon --exec "processing --sketch=$(pwd) --run" sketch.pde
+    ```
+  </Tab>
+</Tabs>
+
+## Built-in language support
+
+nodemon includes built-in `execMap` entries for several languages, so you can use them without any configuration:
+
+```bash
+nodemon app.py     # runs with python
+nodemon app.rb     # runs with ruby
+nodemon app.ts     # runs with ts-node
+```
+
+## Adding more languages with `execMap`
+
+For languages not covered by the built-in defaults, add entries to `nodemon.json` using the `execMap` property.
+
+For example, to add support for Perl (`.pl`):
+
+```json nodemon.json
+{
+  "execMap": {
+    "pl": "perl"
+  }
+}
+```
+
+Now nodemon knows which executable to use for `.pl` files without any additional flags:
+
+```bash
+nodemon script.pl
+```
+
+For more complex commands, you can pass the full invocation as the value:
+
+```json nodemon.json
+{
+  "execMap": {
+    "pde": "processing --sketch={{pwd}} --run"
+  }
+}
+```
+
+<Tip>
+  It is generally recommended to put your own `execMap` entries in your global `~/nodemon.json` so they apply across all projects.
+</Tip>
+
+## Suppressing the support message in CI
+
+When running nodemon in a CI environment, it may print a message asking you to support the project. To suppress this output, set the `SUPPRESS_SUPPORT` environment variable to `1`:
+
+```bash
+SUPPRESS_SUPPORT=1 nodemon --exec python app.py
+```
+
+Or export it in your CI environment configuration so it applies to all nodemon invocations.

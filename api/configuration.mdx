@@ -1,0 +1,184 @@
+---
+title: "Configuration reference"
+description: "Complete reference for all NodemonSettings, NodemonConfig, and NodemonExecOptions fields accepted by the nodemon programmatic API."
+---
+
+When calling `nodemon(settings)`, the argument must conform to the `NodemonSettings` interface. `NodemonSettings` extends both `NodemonConfig` and `NodemonExecOptions`, and adds `events` and `env`.
+
+## NodemonConfig
+
+Runtime and watch behaviour options.
+
+<ParamField body="restartable" type="false | string" default="rs">
+  The string a user can type into stdin to trigger a manual restart. Set to `false` to disable stdin-based restarting.
+</ParamField>
+
+<ParamField body="colours" type="boolean">
+  Whether nodemon log output includes terminal colour escape codes.
+</ParamField>
+
+<ParamField body="execMap" type="Record<string, string>">
+  Maps file extensions to the executable used to run them. For example, `{ "rb": "ruby", "py": "python" }` lets nodemon run `.rb` and `.py` files without the `--exec` flag.
+</ParamField>
+
+<ParamField body="ignoreRoot" type="string[]">
+  Root-level paths that nodemon will never watch, regardless of the `watch` option. Defaults include `.git`, `node_modules`, `bower_components`, `.nyc_output`, `coverage`, and `.sass-cache`.
+</ParamField>
+
+<ParamField body="watch" type="string[]">
+  Paths or glob patterns to watch. When set, nodemon only watches these locations instead of the current working directory.
+
+  ```js
+  nodemon({
+    script: 'app.js',
+    watch: ['app', 'lib']
+  });
+  ```
+</ParamField>
+
+<ParamField body="ignore" type="string[]">
+  Paths or glob patterns to ignore. Patterns are matched against the full absolute path. Use `**` glob syntax for recursive ignores.
+
+  ```js
+  nodemon({
+    script: 'app.js',
+    ignore: ['**/test/**', '**/docs/**']
+  });
+  ```
+</ParamField>
+
+<ParamField body="stdin" type="boolean">
+  Whether nodemon listens to stdin for the restart command (defined by `restartable`). Defaults to `true`.
+</ParamField>
+
+<ParamField body="runOnChangeOnly" type="boolean">
+  When `true`, nodemon does not start the child process immediately. It waits for the first file change before launching.
+</ParamField>
+
+<ParamField body="verbose" type="boolean">
+  Enables verbose logging. When set, nodemon also emits `log` events of type `detail`.
+</ParamField>
+
+<ParamField body="signal" type="string">
+  The signal sent to the child process when nodemon needs to restart it. Defaults to `SIGUSR2`.
+
+  ```js
+  nodemon({ script: 'app.js', signal: 'SIGHUP' });
+  ```
+</ParamField>
+
+<ParamField body="stdout" type="boolean" default="true">
+  When `false`, nodemon does not pipe the child's stdout/stderr to `process.stdout`/`process.stderr`. This is required to use the `readable`, `stdout`, and `stderr` events to handle output manually.
+</ParamField>
+
+<ParamField body="watchOptions" type="WatchOptions">
+  Options passed directly to [chokidar](https://github.com/paulmillr/chokidar), the underlying file watcher. Accepts the full chokidar `WatchOptions` object.
+</ParamField>
+
+<ParamField body="cwd" type="string">
+  The working directory nodemon uses when resolving paths and loading config files. Defaults to `process.cwd()`.
+</ParamField>
+
+<ParamField body="dump" type="boolean">
+  When `true`, nodemon prints its fully resolved configuration and exits. Useful for debugging config loading.
+</ParamField>
+
+<ParamField body="delay" type="number">
+  Milliseconds to wait after the last detected file change before restarting the child process. This prevents multiple rapid restarts when many files change at once.
+
+  ```js
+  nodemon({ script: 'app.js', delay: 2500 }); // wait 2.5 s
+  ```
+</ParamField>
+
+<ParamField body="spawn" type="boolean">
+  Force nodemon to use `spawn` rather than `fork` when launching the child process.
+</ParamField>
+
+<ParamField body="noUpdateNotifier" type="boolean">
+  Suppress the update notification that nodemon displays when a newer version is available.
+</ParamField>
+
+<ParamField body="legacyWatch" type="boolean">
+  Use chokidar's polling mode instead of native filesystem events. Useful in networked environments such as Docker volumes where native events are unreliable.
+</ParamField>
+
+<ParamField body="pollingInterval" type="number">
+  Interval in milliseconds between polls when `legacyWatch` is enabled.
+</ParamField>
+
+<ParamField body="quiet" type="boolean">
+  Minimise nodemon log output to start/stop messages only.
+</ParamField>
+
+<ParamField body="configFile" type="string">
+  Path to an alternative nodemon JSON config file. Overrides the default `nodemon.json` lookup.
+</ParamField>
+
+<ParamField body="exitCrash" type="boolean">
+  When `true`, nodemon exits if the child process crashes instead of continuing to watch for changes.
+</ParamField>
+
+## NodemonExecOptions
+
+Options that control what script is executed and how.
+
+<ParamField body="script" type="string">
+  Path to the script nodemon should run.
+</ParamField>
+
+<ParamField body="scriptPosition" type="number">
+  Index in the final argument array where the script path is inserted. Rarely needed outside of internal use.
+</ParamField>
+
+<ParamField body="args" type="string[]">
+  Arguments passed to the script when it is started.
+</ParamField>
+
+<ParamField body="ext" type="string">
+  Comma- or space-separated list of file extensions to watch. Defaults to `js,mjs,cjs,json`.
+
+  ```js
+  nodemon({ script: 'app.js', ext: 'js json ts' });
+  ```
+</ParamField>
+
+<ParamField body="exec" type="string">
+  The executable used to run the script. Defaults to `node`. Set to another runtime such as `python` or `ruby` to run non-Node scripts.
+</ParamField>
+
+<ParamField body="execArgs" type="string[]">
+  Arguments passed to the exec runtime itself (for example, Node.js flags). Also aliased as `nodeArgs`.
+</ParamField>
+
+<ParamField body="nodeArgs" type="string[]">
+  Alias for `execArgs`. Arguments forwarded to the node (or exec) process.
+</ParamField>
+
+## Additional NodemonSettings fields
+
+`NodemonSettings` extends `NodemonConfig` and `NodemonExecOptions` with two extra fields:
+
+<ParamField body="events" type="Record<string, string>">
+  A map of event names to shell commands. When the named event fires, nodemon spawns the shell command. Equivalent to the `events` key in `nodemon.json`.
+
+  ```js
+  nodemon({
+    script: 'app.js',
+    events: {
+      restart: "osascript -e 'display notification \"app restarted\"'"
+    }
+  });
+  ```
+</ParamField>
+
+<ParamField body="env" type="Record<string, string>">
+  Environment variables to set in the child process's environment.
+
+  ```js
+  nodemon({
+    script: 'app.js',
+    env: { NODE_ENV: 'development', PORT: '3000' }
+  });
+  ```
+</ParamField>

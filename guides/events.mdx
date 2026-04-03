@@ -1,0 +1,132 @@
+---
+title: "Event hooks"
+description: "Trigger shell commands or custom actions when nodemon changes state — on start, restart, crash, or quit."
+---
+
+Nodemon emits lifecycle events whenever its state changes. You can hook into these events in two ways:
+
+1. **Shell commands** — defined in `nodemon.json` or `package.json`, run automatically by nodemon
+2. **Programmatic listeners** — when using nodemon as a required module
+
+## Shell command hooks (nodemon.json)
+
+Add an `events` object to your `nodemon.json` config. The keys are event names and the values are shell commands to run:
+
+```json nodemon.json
+{
+  "events": {
+    "start": "echo 'App starting...'",
+    "restart": "echo 'App restarted'",
+    "crash": "echo 'App crashed'"
+  }
+}
+```
+
+### Clear the console on restart
+
+A common use case is clearing the terminal when nodemon restarts:
+
+```json nodemon.json
+{
+  "events": {
+    "start": "cls || clear"
+  }
+}
+```
+
+<Note>
+  On Windows, `cls` clears the scroll buffer too. The `|| clear` fallback handles macOS and Linux.
+</Note>
+
+### Desktop notifications (macOS)
+
+Trigger a macOS notification every time your app restarts:
+
+```json nodemon.json
+{
+  "events": {
+    "restart": "osascript -e 'display notification \"app restarted\" with title \"nodemon\"'"
+  }
+}
+```
+
+## Available events
+
+| Event | When it fires |
+|-------|--------------|
+| `start` | Child process has started |
+| `restart` | Child process has restarted due to a file change |
+| `crash` | Child process crashed (nodemon does **not** emit `exit` after a crash) |
+| `exit` | Child process exited cleanly |
+| `quit` | Nodemon itself is quitting |
+| `config:update` | Nodemon's configuration has changed |
+
+## Programmatic event listeners
+
+When you `require` nodemon, you get a full event emitter:
+
+```js
+const nodemon = require('nodemon');
+
+nodemon({ script: 'app.js' })
+  .on('start', function () {
+    console.log('App has started');
+  })
+  .on('restart', function (files) {
+    console.log('App restarted due to:', files);
+  })
+  .on('crash', function () {
+    console.log('App crashed');
+  })
+  .on('quit', function () {
+    console.log('Nodemon quit');
+    process.exit();
+  });
+```
+
+### Forcing a restart or quit programmatically
+
+You can emit events directly to control nodemon:
+
+```js
+// Force a restart
+nodemon.emit('restart');
+
+// Force nodemon to quit
+nodemon.emit('quit');
+```
+
+### Capturing log output
+
+The `log` event lets you intercept nodemon's own log messages (not your app's output):
+
+```js
+nodemon.on('log', function (e) {
+  // e.type: 'detail' | 'log' | 'status' | 'error' | 'fail'
+  // e.message: plain text
+  // e.colour: text with terminal escape codes + "[nodemon]" prefix
+  console.log(e.message);
+});
+```
+
+### Piping child process output
+
+Set `stdout: false` to suppress normal output and handle streams manually:
+
+```js
+const fs = require('fs');
+const nodemon = require('nodemon');
+
+nodemon({
+  script: 'server.js',
+  stdout: false // tell nodemon not to print child output
+}).on('readable', function () {
+  // 'readable' fires when stdout and stderr streams are ready
+  this.stdout.pipe(fs.createWriteStream('output.txt'));
+  this.stderr.pipe(fs.createWriteStream('err.txt'));
+});
+```
+
+<Tip>
+  Use the `readable` event rather than `start` to pipe streams — it fires specifically when the streams are ready to use.
+</Tip>

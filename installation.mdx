@@ -1,0 +1,95 @@
+---
+title: "Installation"
+description: "Install nodemon globally or as a project dev dependency using npm, yarn, or pnpm."
+---
+
+## Requirements
+
+nodemon requires **Node.js >= 10**.
+
+## Global install
+
+A global install makes the `nodemon` command available everywhere on your system. This is the most common setup for individual developers.
+
+<CodeGroup>
+
+```bash npm
+npm install -g nodemon
+```
+
+```bash yarn
+yarn global add nodemon
+```
+
+```bash pnpm
+pnpm add -g nodemon
+```
+
+</CodeGroup>
+
+After installing, verify it works:
+
+```bash
+nodemon --version
+```
+
+## Local install (dev dependency)
+
+Install nodemon as a dev dependency when you want to pin a specific version per project or keep your team's environment consistent.
+
+<CodeGroup>
+
+```bash npm
+npm install --save-dev nodemon
+```
+
+```bash yarn
+yarn add nodemon --dev
+```
+
+```bash pnpm
+pnpm add -D nodemon
+```
+
+</CodeGroup>
+
+<Note>
+  A locally installed nodemon is not available on your system `PATH` and cannot be called directly from the terminal. Use it through an npm script or via `npx`.
+</Note>
+
+### Using nodemon in npm scripts
+
+Add a `start` or `dev` script to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "dev": "nodemon server.js"
+  }
+}
+```
+
+Then run it with:
+
+```bash
+npm run dev
+```
+
+## Using npx
+
+If you don't want to install nodemon at all, run it on demand with `npx`:
+
+```bash
+npx nodemon server.js
+```
+
+`npx` downloads and runs the latest version of nodemon without modifying your project or global environment. This is useful for one-off use or in CI environments.
+
+## When to use global vs local
+
+| | Global | Local (dev dependency) |
+|---|---|---|
+| Available in terminal | Yes | Only via `npx` or npm scripts |
+| Version pinned per project | No | Yes |
+| Included in `package.json` | No | Yes |
+| Recommended for | Personal machines | Team projects |

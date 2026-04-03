@@ -1,0 +1,110 @@
+---
+title: "Using nodemon with Docker"
+description: "Configure nodemon to detect file changes in Docker mounted volumes using polling mode and other workarounds."
+---
+
+Running nodemon inside a Docker container with mounted volumes is a common pattern for local development. However, nodemon may not detect file changes in mounted volumes because the filesystem events that nodemon relies on are not forwarded from the host into the container.
+
+## The problem
+
+nodemon uses [Chokidar](https://www.npmjs.com/package/chokidar) to watch for file changes. In networked environments — such as a container reading files across a mounted drive — native filesystem events are often not delivered, so nodemon never sees the changes and never restarts.
+
+## Recommended setup
+
+<Steps>
+  <Step title="Install procps in your image">
+    Some Node.js Docker images are missing the full suite of filesystem process utilities that allow nodemon to restart automatically. Install the `procps` package to fix this before reaching for polling mode.
+
+    ```dockerfile Dockerfile
+    FROM node:8.9.4-wheezy
+    RUN apt-get update && apt-get install -y procps
+    ```
+
+    After adding `procps`, rebuild your image and test whether nodemon detects changes. This alone is enough for many setups.
+  </Step>
+  <Step title="Enable legacy watch (polling) if needed">
+    If nodemon still does not detect changes after installing `procps`, enable polling with the `--legacy-watch` flag (short form: `-L`):
+
+    ```bash
+    nodemon -L server.js
+    ```
+
+    Or set it in `nodemon.json`:
+
+    ```json nodemon.json
+    {
+      "legacyWatch": true
+    }
+    ```
+
+    <Warning>
+      Legacy watch polls every file nodemon is watching on a fixed interval. It is reliable but CPU-intensive, especially on large projects. Use it as a last resort.
+    </Warning>
+  </Step>
+  <Step title="Tune the polling interval">
+    When using polling mode you can adjust how frequently nodemon checks for changes with the `--polling-interval` flag (alias `-P`), specified in milliseconds. The `pollingInterval` key is also accepted in `nodemon.json`.
+
+    ```bash
+    nodemon -L --polling-interval 500 server.js
+    ```
+
+    ```json nodemon.json
+    {
+      "legacyWatch": true,
+      "pollingInterval": 500
+    }
+    ```
+  </Step>
+</Steps>
+
+## docker-compose example
+
+A typical `docker-compose.yml` that uses nodemon with legacy watch:
+
+```yaml docker-compose.yml
+version: "3"
+services:
+  app:
+    build: .
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "3000:3000"
+    command: npx nodemon -L server.js
+```
+
+## Increasing inotify watches on Linux/Mac
+
+If nodemon reports zero files being watched or fails silently, your system may have hit the inotify watch limit. Run the following command on the **host** machine to raise the limit:
+
+```bash
+echo fs.inotify.max_user_watches=582222 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+## "Port in use" with `--inspect` and Docker
+
+When using `--inspect` (Node.js debugger) inside Docker, nodemon may try to start the new process before the debugger port from the previous process has been released, producing:
+
+```
+Starting inspector on 127.0.0.1:9229 failed: address already in use
+```
+
+The workaround is to use [kill-port](https://github.com/tiaanduplessis/kill-port) to explicitly free the debug port before each restart:
+
+```bash
+nodemon --delay 80ms --exec 'kill-port -k 9228/tcp; node --inspect=0.0.0.0:9228 ./app/http.js'
+```
+
+Alternatively, add an event hook in `nodemon.json` to kill the port on every restart:
+
+```json nodemon.json
+{
+  "events": {
+    "restart": "sh -c 'lsof -i :${PORT:-9229} -t | xargs kill'"
+  }
+}
+```
+
+<Note>
+  A common cause for the "address already in use" error is an async graceful shutdown that has not completed before nodemon starts the next process. If you are awaiting async cleanup in a `SIGUSR2` handler, try removing the `await` to let the process exit synchronously.
+</Note>

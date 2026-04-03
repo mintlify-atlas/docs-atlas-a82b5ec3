@@ -1,27 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Nodemon",
+  "projectType": "cli-tool",
+  "projectName": "Nodemon",
+  "projectDescription": "A development utility that monitors your Node.js application for file changes and automatically restarts the server.",
   "theme": "palm",
-  "colors": {
-    "primary": "#73d34b",
-    "light": "#689d44",
-    "dark": "#4c4d3c"
-  },
-  "logo": {
-    "light": "https://media.brand.dev/34123d0f-f906-430b-b010-b41d8a66be94.png",
-    "dark": "https://media.brand.dev/34123d0f-f906-430b-b010-b41d8a66be94.png"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/remy/nodemon"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/remy/nodemon"
-    }
-  },
+  "primaryColor": "#73d34b",
+  "lightColor": "#689d44",
+  "darkColor": "#4c4d3c",
   "navigation": {
     "tabs": [
       {
@@ -85,5 +69,29 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Automatic restart on file changes using Chokidar",
+    "Zero-config drop-in replacement for the node command",
+    "Configurable file watching with glob patterns",
+    "Ignore rules for directories and file patterns",
+    "Support for non-Node.js scripts via --exec flag",
+    "Programmatic API for integration into build tools",
+    "Custom event hooks (start, restart, crash, quit)",
+    "Legacy polling mode for Docker/network mounts",
+    "Configurable restart delay/debounce",
+    "Custom kill signals for graceful shutdown"
+  ],
+  "publicApiSurface": [
+    "nodemon(settings: NodemonSettings): Nodemon",
+    "nodemon.on(event, listener)",
+    "nodemon.once(event, listener)",
+    "nodemon.emit(event)",
+    "nodemon.reset(callback)",
+    "nodemon.restart()",
+    "nodemon.removeAllListeners(event)",
+    "nodemon.config",
+    "CLI: nodemon [options] [script.js] [args]",
+    "CLI: --watch, --ignore, --ext, --exec, --delay, --signal, --config, --verbose, --legacy-watch"
+  ]
 }

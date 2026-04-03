@@ -1,0 +1,354 @@
+---
+title: "FAQ"
+description: "Answers to frequently asked questions about nodemon, collected from real issues and community feedback."
+---
+
+<AccordionGroup>
+
+  <Accordion title="How do I clear the console on restart?">
+    Rather than adding a dedicated feature, you can use nodemon's event system to clear the console on start. In your `nodemon.json` (or under `nodemonConfig` in `package.json`), add the following event handler:
+
+    ```json
+    {
+      "events": {
+        "start": "cls || clear"
+      }
+    }
+    ```
+
+    `cls` runs on Windows and `clear` runs on macOS/Linux — the `||` means whichever succeeds will run.
+
+    <Note>
+      On Windows, this clears the scroll buffer as well. If you try to use node to clear the screen instead, you may hit a race condition between process boot time and the start event. The event handler approach is the fastest and most reliable.
+    </Note>
+  </Accordion>
+
+  <Accordion title="nodemon doesn't restart when I change my .env file">
+    This is an edge case in how nodemon watches files. nodemon can't reliably distinguish between `.env` (a hidden file with no extension) and `*.env` (a file with a `.env` extension and no name).
+
+    To watch `.env` explicitly, pass it directly with `--watch`. However, once you specify `--watch`, nodemon only watches what you tell it to, so you must also re-add your application directory:
+
+    ```bash
+    nodemon --watch .env --watch app app/index.js
+    ```
+
+    This tells nodemon to watch both the `.env` file and the `app` directory.
+  </Accordion>
+
+  <Accordion title="nodemon doesn't work with my REPL">
+    By default, nodemon listens on stdin for the `rs` command to trigger restarts. This conflicts with REPLs that also need to read from stdin.
+
+    To disable this behavior, set `restartable` to `false` in `nodemon.json`:
+
+    ```json
+    {
+      "restartable": false
+    }
+    ```
+
+    This leaves stdin entirely to your application rather than intercepting it.
+  </Accordion>
+
+  <Accordion title="Strange or failing behaviour when starting a node-based executable">
+    By default, nodemon forks your node scripts. In most cases this works fine, but some edge cases require a different approach.
+
+    If you're seeing unexpected behavior when starting a node-based executable, force nodemon to spawn the process instead:
+
+    ```bash
+    nodemon --spawn app.js
+    ```
+
+    The `--spawn` option tells nodemon to use `spawn` instead of `fork` when starting your process.
+  </Accordion>
+
+  <Accordion title="My script arguments are being taken by nodemon">
+    Use the `--` separator to tell nodemon to stop processing its own arguments. Everything after `--` is passed directly to your script:
+
+    ```bash
+    nodemon app.js -- -L -opt2 -opt3
+    ```
+
+    In this example, `-L` (which is nodemon's short flag for `--legacy-watch`) is passed to `app.js` instead of being consumed by nodemon.
+  </Accordion>
+
+  <Accordion title='Error: "process failed, unhandled exit code (2)"'>
+    nodemon monitors the exit code of the child process it runs. When the exit code is `2`, nodemon treats it as an error. This can happen when arguments are invalid for the executing program, or due to other reasons such as test failures.
+
+    For example, mocha@3.x exits with code `2` when tests fail. To handle this gracefully, wrap your command so it always exits with code `1` on failure:
+
+    ```bash
+    nodemon -x 'mocha test/bad.test.js || exit 1'
+    ```
+
+    The `|| exit 1` ensures nodemon receives a recognized failure exit code rather than `2`.
+  </Accordion>
+
+  <Accordion title="How do I suppress the support message?">
+    If you're already supporting nodemon or you're running it in a CI environment where the support message is unwanted, set the `SUPPRESS_SUPPORT` environment variable:
+
+    ```bash
+    SUPPRESS_SUPPORT=1 nodemon app.js
+    ```
+
+    You can also add this to your CI environment configuration so it applies globally across runs.
+  </Accordion>
+
+  <Accordion title="Can't install nodemon: permission issue">
+    If a global install fails with an error like this in the npm error log:
+
+    ```
+    gyp WARN EACCES user "root" does not have permission to access the dev dir "<some-local-dir>"
+    ```
+
+    Re-run the install with the `--unsafe-perm` flag:
+
+    ```bash
+    sudo npm install -g nodemon --unsafe-perm
+    ```
+
+    <Tip>
+      A better long-term fix is to use [nvm](https://github.com/nvm-sh/nvm) to manage your Node.js installation. With nvm, Node.js is installed in your home directory and global packages don't require `sudo`.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="My changes aren't being detected">
+    nodemon uses [Chokidar](https://www.npmjs.com/package/chokidar) for file watching. In some environments (Docker containers, network drives, WSL), the native file system events that Chokidar relies on are not available or unreliable.
+
+    Enable polling mode with the `--legacy-watch` flag (or `-L` for short):
+
+    ```bash
+    nodemon --legacy-watch
+    # or
+    nodemon -L
+    ```
+
+    You can also set this permanently in `nodemon.json`:
+
+    ```json
+    {
+      "legacyWatch": true
+    }
+    ```
+
+    <Note>
+      Legacy watch mode polls every file it can find, which is more CPU-intensive. Use it as a last resort when native watch events aren't working.
+    </Note>
+  </Accordion>
+
+  <Accordion title="nodemon tries to run two scripts">
+    If you see nodemon starting with two scripts in the command, like:
+
+    ```
+    9 Dec 23:52:58 - [nodemon] starting `node ./app.js fixtures/sigint.js`
+    ```
+
+    This happens when the main script argument wasn't found, so nodemon also picked up the `main` entry from your `package.json`. Double-check that the path to your script is correct.
+  </Accordion>
+
+  <Accordion title="What has precedence — ignore or watch?">
+    **Ignore rules always win.** If a file matches an ignore rule, it will not trigger a restart regardless of what the watch rules say.
+
+    For example, if you ignore `node_modules` but watch `node_modules/*.js`, no changes inside `node_modules` will cause a restart because the ignore rule takes final precedence.
+
+    Your ignore rules are merged with the built-in `ignoreRoot` defaults (`['.git', 'node_modules', ...]`). If you need to watch a normally-ignored directory like `node_modules`, you must override `ignoreRoot` in `nodemon.json`:
+
+    ```json
+    {
+      "ignoreRoot": [".git"]
+    }
+    ```
+
+    This removes `node_modules` from the default ignore list, so nodemon will restart on changes there.
+  </Accordion>
+
+  <Accordion title="My .nodemonignore file is being ignored">
+    The legacy `.nodemonignore` file was dropped in **nodemon@3**.
+
+    Use `nodemon.json` instead. If you have both a `nodemon.json` and a `.nodemonignore`, the `.nodemonignore` is ignored entirely. The same applies if you have a `nodemon.json` in your `$HOME` directory — it supersedes the old ignore file format.
+
+    Migrate your ignore patterns to `nodemon.json`:
+
+    ```json
+    {
+      "ignore": ["*.test.js", "docs/**"]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="nodemon does nothing on Ubuntu">
+    Globally installed Node.js applications on Ubuntu sometimes produce no output when run. This appears to be related to an incorrect Node.js installation, often tied to the binary being named `nodejs` instead of `node`.
+
+    The fix that has worked consistently is to install [nvm](https://github.com/nvm-sh/nvm) first and then use it to install Node.js, rather than using `apt-get` or similar package managers.
+
+    ```bash
+    # Install nvm
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+    # Then install Node.js via nvm
+    nvm install --lts
+    nvm use --lts
+    ```
+  </Accordion>
+
+  <Accordion title="nodemon doesn't work on Fedora">
+    Fedora packages Node.js as `nodejs` rather than `node`, but nodemon looks for the `node` binary.
+
+    Create a symlink so `node` resolves correctly:
+
+    ```bash
+    sudo ln -s /usr/bin/nodejs /usr/local/bin/node
+    ```
+
+    Alternatively, use the `--exec` option to explicitly specify the binary:
+
+    ```bash
+    nodemon --exec nodejs app.js
+    ```
+
+    <Note>
+      This naming conflict exists because Fedora (and Ubuntu) package an unrelated program called "Amateur Packet Radio Node" which already uses the `node` binary name.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How do I use nodemon with forever?">
+    You can combine nodemon with [forever](https://github.com/foreverjs/forever) so that forever handles crashes and nodemon handles file-change restarts.
+
+    Start the process with:
+
+    ```bash
+    forever start --uid foo --killSignal=SIGTERM -c 'nodemon --exitcrash' server.js
+    ```
+
+    Key flags:
+    - `--uid foo` — assigns a name to the process for easier management
+    - `--killSignal=SIGTERM` — ensures forever sends `SIGTERM` instead of `SIGKILL`, so nodemon can stop the child process cleanly
+    - `--exitcrash` — tells nodemon to exit if the script crashes unexpectedly, allowing forever to restart it
+
+    To stop both nodemon and the watched process:
+
+    ```bash
+    forever stop foo
+    ```
+
+    <Note>
+      nodemon is primarily a development tool and is not recommended for production use. However, this setup is documented for cases where it is needed.
+    </Note>
+  </Accordion>
+
+  <Accordion title="What does --verbose give me?">
+    Running nodemon with `--verbose` (or `-V`) adds detailed information about startup and restarts.
+
+    **On startup**, verbose mode shows:
+    - Which nodemon config files are loaded (local and global)
+    - Which ignore rules are active
+    - Which file extensions are being watched
+    - The process ID of your application (`child pid`)
+    - The process ID of nodemon itself (for sending kill signals)
+
+    Example startup output:
+
+    ```text
+    14 Apr 15:24:58 - [nodemon] v1.0.17
+    14 Apr 15:24:58 - [nodemon] reading config /Users/remy/Sites/jsbin-private/nodemon.json
+    14 Apr 15:24:58 - [nodemon] to restart at any time, enter `rs`
+    14 Apr 15:24:58 - [nodemon] or send SIGHUP to 58118 to restart
+    14 Apr 15:24:58 - [nodemon] ignoring: /Users/remy/Sites/jsbin-private/.git/**/* node_modules/**/node_modules
+    14 Apr 15:24:58 - [nodemon] watching: /Users/remy/Sites/jsbin/views/**/* /Users/remy/Sites/jsbin/lib/**/*
+    14 Apr 15:24:58 - [nodemon] watching extensions: json,js,html
+    14 Apr 15:24:58 - [nodemon] starting `node run.js`
+    14 Apr 15:24:58 - [nodemon] child pid: 9292
+    ```
+
+    **On file change**, verbose mode shows:
+    - Which file(s) triggered the change check
+    - Which watch rule matched
+    - How many rules matched and how many caused a restart
+    - The full list of files that triggered the restart
+
+    Example change output:
+
+    ```text
+    14 Apr 15:25:56 - [nodemon] files triggering change check: ../jsbin/lib/app.js
+    14 Apr 15:25:56 - [nodemon] matched rule: **/Users/remy/Sites/jsbin/lib/**/*
+    14 Apr 15:25:56 - [nodemon] changes after filters (before/after): 1/1
+    14 Apr 15:25:56 - [nodemon] restarting due to changes...
+    14 Apr 15:25:56 - [nodemon] ../jsbin/lib/app.js
+    ```
+  </Accordion>
+
+  <Accordion title="Windows: nodemon keeps restarting without changes">
+    This is a known issue related to a Windows OS change that breaks the `fsevents` module used by Chokidar, nodemon's underlying file watcher. The result is spurious change events that trigger restarts even when no files changed.
+
+    Run the following command to disable last-access time tracking (which is the root cause):
+
+    ```bash
+    fsutil behavior set disablelastaccess 1
+    ```
+
+    <Note>
+      This command must be run with administrator privileges. You may need to restart your machine for the change to take effect.
+    </Note>
+  </Accordion>
+
+  <Accordion title='"scripts is disabled on this system" on Windows'>
+    If you see this error in PowerShell:
+
+    ```
+    PS> nodemon app.js
+    nodemon : File C:\…\nodemon.ps1 cannot be loaded because running scripts is disabled on this system.
+    ```
+
+    This is a PowerShell security restriction on script execution. To fix it:
+
+    <Steps>
+      <Step title="Open PowerShell as administrator">
+        Right-click the PowerShell icon and select "Run as administrator".
+      </Step>
+      <Step title="Check the current policy">
+        ```powershell
+        Get-ExecutionPolicy
+        ```
+      </Step>
+      <Step title="Enable script execution">
+        ```powershell
+        Set-ExecutionPolicy remotesigned
+        ```
+      </Step>
+    </Steps>
+
+    The `remotesigned` policy allows locally created scripts to run and requires that downloaded scripts are signed by a trusted publisher.
+  </Accordion>
+
+  <Accordion title="How can I watch all file types in a folder?">
+    Use `'*'` as the extension to watch every file type:
+
+    ```bash
+    nodemon --ext '*' --watch public --exec 'python -m SimpleHTTPServer'
+    ```
+
+    The `--ext '*'` tells nodemon not to filter by extension — any file change in the watched directory will trigger a restart.
+  </Accordion>
+
+  <Accordion title='"Port in use" with --inspect flag and Docker'>
+    When using `--inspect` with Docker, the debug port can remain in use after a restart, causing the new process to fail to bind.
+
+    The workaround is to use [kill-port](https://github.com/tiaanduplessis/kill-port) to close the debug port before starting the new process:
+
+    ```bash
+    nodemon --delay 80ms --exec 'kill-port -k 9228/tcp; node --inspect=0.0.0.0:9228 ./app/http.js'
+    ```
+
+    If the issue is caused by an async graceful shutdown (e.g. `await db.disconnect()` in a `SIGUSR2` handler), removing the `await` may resolve the problem without needing `kill-port`.
+
+    For persistent cases, add a restart event to `nodemon.json` to force-kill the debug port on every restart:
+
+    ```json
+    {
+      "events": {
+        "restart": "sh -c 'lsof -i :${PORT:-9229} -t | xargs kill'"
+      }
+    }
+    ```
+  </Accordion>
+
+</AccordionGroup>

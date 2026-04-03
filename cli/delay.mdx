@@ -1,0 +1,64 @@
+---
+title: "Restart delay"
+description: "Debounce restarts when multiple files change at once using the --delay flag."
+---
+
+By default, nodemon waits 1 second after detecting a file change before restarting your application. The `-d` / `--delay` flag lets you extend this timeout, so nodemon restarts only once after the **last** file change in a burst — not once per changed file.
+
+<Tip>
+  This is especially useful when multiple files are being written in quick succession, such as during a file upload, a build step that emits several outputs at once, or a code generator that touches many files.
+</Tip>
+
+## Syntax
+
+You can express the delay as whole seconds, fractional seconds, or an explicit millisecond value:
+
+<CodeGroup>
+
+```bash Seconds
+nodemon --delay 10 server.js
+```
+
+```bash Float seconds
+nodemon --delay 2.5 server.js
+```
+
+```bash Milliseconds
+nodemon --delay 2500ms server.js
+```
+
+</CodeGroup>
+
+All three forms above result in nodemon waiting 2.5 seconds (or 10 seconds in the first example) after the last detected file change before restarting.
+
+## How the delay works
+
+nodemon restarts your app the given amount of time after the *last* file change, not the first. If more files change during the delay window, the timer resets. This means:
+
+1. A file changes — the delay timer starts.
+2. Another file changes before the timer expires — the timer resets.
+3. No further changes occur — nodemon restarts once the timer expires.
+
+## Setting the delay in nodemon.json
+
+In a config file, the delay value is **always interpreted as milliseconds**, regardless of whether you use a decimal or integer:
+
+```json
+{
+  "delay": 2500
+}
+```
+
+<Note>
+  The CLI and config file formats differ: on the command line `--delay 2.5` means 2.5 seconds, but in `nodemon.json` `"delay": 2500` means 2500 milliseconds. Both represent the same 2.5-second wait.
+</Note>
+
+You can also set the delay under `nodemonConfig` in `package.json`:
+
+```json
+{
+  "nodemonConfig": {
+    "delay": 2500
+  }
+}
+```

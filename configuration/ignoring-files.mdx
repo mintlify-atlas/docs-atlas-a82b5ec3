@@ -1,0 +1,89 @@
+---
+title: "Ignoring files"
+description: "Prevent nodemon from restarting when specific files, directories, or patterns change."
+---
+
+nodemon lets you exclude files and directories from triggering restarts. This is useful for test fixtures, build output, log files, and other paths that change frequently but do not require a server restart.
+
+## Default ignored directories
+
+By default, nodemon ignores the following directories and adds any rules you define on top of them:
+
+- `.git`
+- `node_modules`
+- `bower_components`
+- `.nyc_output`
+- `coverage`
+- `.sass-cache`
+
+You do not need to add these to your config — they are excluded automatically.
+
+## Ignoring paths with --ignore
+
+Use `--ignore` (or `-i`) on the command line to add ignore rules. You can pass the flag multiple times.
+
+**Ignore a directory:**
+
+```bash
+nodemon --ignore lib/ --ignore tests/
+```
+
+**Ignore a specific file:**
+
+```bash
+nodemon --ignore lib/app.js
+```
+
+**Ignore by pattern (quote the argument to prevent shell expansion):**
+
+```bash
+nodemon --ignore 'lib/*.js'
+```
+
+## How ignore rules are matched
+
+Ignore rules are matched against the **full absolute path** of each file. This means glob patterns must account for the entire path, not just the filename.
+
+<Warning>
+  Glob patterns in `--ignore` must use `**` to match across directory
+  boundaries. Using `*/` will not work as expected.
+
+  ```bash
+  # Correct — matches the test directory at any depth
+  nodemon --ignore '**/test/**'
+
+  # Incorrect — will not match
+  nodemon --ignore '*/test/*'
+  ```
+</Warning>
+
+Ignore rules take precedence over watch rules. If a path matches both a `watch` pattern and an `ignore` pattern, the file is excluded.
+
+## Setting ignore rules in nodemon.json
+
+Add an `ignore` array to your `nodemon.json`:
+
+```json nodemon.json
+{
+  "ignore": ["*.test.js", "**/fixtures/**", "**/docs/**"]
+}
+```
+
+## Overriding the default ignore list
+
+The default ignored directories are controlled by the `ignoreRoot` config option. If you need to watch a directory that nodemon ignores by default — for example, `node_modules` in a monorepo — override `ignoreRoot` in your `nodemon.json`:
+
+```json nodemon.json
+{
+  "ignoreRoot": [".git"],
+  "watch": ["node_modules/my-linked-package/src"]
+}
+```
+
+This replaces the entire default list with only `.git`, so `node_modules` is no longer automatically excluded. Add any other directories you still want to ignore back into the `ignore` array.
+
+<Note>
+  Changes to `ignoreRoot` affect which directories nodemon monitors at a low
+  level. Removing `node_modules` from `ignoreRoot` can significantly increase
+  the number of files being watched and may impact performance.
+</Note>

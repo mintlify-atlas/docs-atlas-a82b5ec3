@@ -1,0 +1,145 @@
+---
+title: "CLI options"
+description: "Complete reference for all nodemon command-line flags, grouped by category."
+---
+
+## Usage
+
+```bash
+nodemon [nodemon options] [script.js] [args]
+```
+
+<Note>
+  Any unrecognised arguments are passed directly to the executing command.
+</Note>
+
+<Tip>
+  Use `--` to stop nodemon from consuming arguments that are intended for your script:
+
+  ```bash
+  nodemon app.js -- --config
+  ```
+
+  Everything after `--` is forwarded to your script rather than parsed by nodemon.
+</Tip>
+
+---
+
+## Configuration
+
+| Flag | Shorthand | Description |
+|------|-----------|-------------|
+| `--config <file>` | | Use an alternate `nodemon.json` config file instead of the default. |
+| `--exitcrash` | | Exit nodemon if the script crashes, rather than keeping it running. Useful when nodemon is managed by a process supervisor like `forever` or `pm2`. |
+| `--ignore <pattern>` | `-i` | Ignore specific files, directories, or glob patterns. Repeat the flag for multiple entries. |
+| `--no-colors` | | Disable colored output in the terminal. |
+| `--signal <signal>` | | Use the specified kill signal instead of the default (`SIGUSR2`). Example: `SIGTERM`, `SIGHUP`. |
+| `--watch <path>` | `-w` | Watch a directory or file. Repeat the flag for each path you want to watch. |
+| `--no-update-notifier` | | Opt out of the automatic update version check. |
+
+**Examples:**
+
+```bash
+# Use a custom config file
+nodemon --config nodemon.dev.json server.js
+
+# Ignore a directory and a glob pattern
+nodemon --ignore tests/ --ignore '**/*.test.js' server.js
+
+# Watch specific directories only
+nodemon --watch app --watch libs app/server.js
+
+# Use SIGTERM instead of the default signal
+nodemon --signal SIGTERM server.js
+```
+
+---
+
+## Execution
+
+| Flag | Shorthand | Description |
+|------|-----------|-------------|
+| `--on-change-only` | `-C` | Only execute the script when a file change is detected, not on initial startup. |
+| `--cwd <dir>` | | Change into `<dir>` before running the script. |
+| `--ext <extensions>` | `-e` | Comma-separated list of file extensions to watch. Defaults to `js,mjs,coffee,litcoffee,json`. |
+| `--no-stdin` | `-I` | Pass stdin directly to the child process instead of piping it through nodemon. |
+| `--spawn` | | Force nodemon to use `spawn` instead of `fork` when starting the child process (node only). |
+| `--exec <app>` | `-x` | Execute the script using the specified program. Example: `--exec "python -v"` or `--exec ruby`. |
+| `--` | | Stop nodemon from consuming further arguments; everything after `--` is passed to your script. |
+
+**Examples:**
+
+```bash
+# Run a Python script
+nodemon --exec "python -v" app.py
+
+# Watch only .js and .pug files
+nodemon -e js,pug server.js
+
+# Change working directory before running
+nodemon --cwd /srv/app server.js
+
+# Only restart on change, skip the initial run
+nodemon --on-change-only server.js
+
+# Pass flags through to the script
+nodemon app.js -- --port 3000 --debug
+```
+
+---
+
+## Watching
+
+| Flag | Shorthand | Description | Default |
+|------|-----------|-------------|---------|
+| `--delay <n>` | `-d` | Debounce restarts: wait `n` seconds after the last file change before restarting. Supports floats and an `ms` suffix for milliseconds. | 1 second |
+| `--legacy-watch` | `-L` | Enable polling-based file watching via Chokidar. Required in some networked or containerised environments (e.g. Docker mounted volumes). | `false` |
+| `--polling-interval <ms>` | `-P` | Set the polling interval in milliseconds. Used together with `--legacy-watch`. | `100` |
+
+**Examples:**
+
+```bash
+# Wait 3 seconds after the last change before restarting
+nodemon --delay 3 server.js
+
+# Enable legacy polling (e.g. inside Docker)
+nodemon -L server.js
+
+# Custom polling interval of 500ms
+nodemon -L -P 500 server.js
+```
+
+---
+
+## Information
+
+| Flag | Shorthand | Description |
+|------|-----------|-------------|
+| `--dump` | | Print the full resolved configuration and exit. Useful for debugging config file loading. |
+| `--help` | `-h` | Show the default help text. |
+| `--help <topic>` | | Show help for a specific topic. Run `nodemon --help topics` to list all available topics. |
+| `--quiet` | `-q` | Minimise nodemon output to start and stop messages only. |
+| `--version` | `-v` | Print the current nodemon version and exit. |
+| `--verbose` | `-V` | Show detailed information about which file changes are triggering restarts. |
+
+**Examples:**
+
+```bash
+# Print the current version
+nodemon -v
+
+# List all help topics
+nodemon --help topics
+
+# Show help for the config topic
+nodemon --help config
+
+# Run with verbose output to debug watch triggers
+nodemon -V server.js
+
+# Suppress most nodemon output
+nodemon -q server.js
+
+# Dump the resolved config for debugging
+nodemon --dump
+```

@@ -1,0 +1,128 @@
+---
+title: "Executable map"
+description: "Map file extensions to executables so nodemon knows how to run scripts in any language."
+---
+
+By default, nodemon runs scripts with Node.js. The `execMap` config option lets you map file extensions to any executable, so you can use nodemon with Ruby, Python, Perl, or any other runtime.
+
+## Built-in defaults
+
+nodemon ships with a small set of built-in extension mappings out of the box:
+
+| Extension | Executable |
+|-----------|-----------|
+| `.py` | `python` |
+| `.rb` | `ruby` |
+| `.ts` | `ts-node` |
+
+This means you can run `nodemon app.py` or `nodemon app.rb` without any extra configuration. The `.ts` → `ts-node` mapping is removed automatically if your `NODE_OPTIONS` environment variable includes `--loader` or `--import`.
+
+## How it works
+
+When you run `nodemon script.rb`, nodemon reads the file extension (`.rb`), looks it up in `execMap`, and runs the mapped executable. If no match is found, nodemon falls back to its defaults.
+
+## Configuring execMap
+
+Add an `execMap` object to your `nodemon.json`. Keys are file extensions (without the leading dot), and values are the executable command to run:
+
+```json nodemon.json
+{
+  "execMap": {
+    "pl": "perl",
+    "rb": "ruby",
+    "py": "python"
+  }
+}
+```
+
+With this config in place, you can run:
+
+```bash
+nodemon script.pl
+nodemon app.rb
+nodemon app.py
+```
+
+nodemon automatically selects the correct executable for each file.
+
+## Passing arguments to the executable
+
+The executable value can include arguments. The following example maps `.js` files to `node --harmony`, enabling the harmony flag for all JavaScript files:
+
+```json nodemon.json
+{
+  "execMap": {
+    "js": "node --harmony"
+  }
+}
+```
+
+For more complex commands, you can use template variables. The following example passes the current working directory to a processing sketch:
+
+```json nodemon.json
+{
+  "execMap": {
+    "pde": "processing --sketch={{pwd}} --run"
+  }
+}
+```
+
+## Using a global config for personal preferences
+
+Because `execMap` is language-specific and often tied to a developer's local environment rather than a project, it is generally recommended to set it in your **global** `nodemon.json` (located at `~/nodemon.json`):
+
+```json ~/nodemon.json
+{
+  "execMap": {
+    "rb": "ruby",
+    "pl": "perl",
+    "py": "python"
+  }
+}
+```
+
+This lets you run `nodemon script.rb` in any project without adding language config to every repository.
+
+## Using --exec on the command line
+
+The `--exec` (or `-x`) flag is the command-line equivalent of `execMap`. Use it to specify an executable for a single invocation:
+
+```bash
+nodemon --exec "python -v" ./app.py
+```
+
+When you use `--exec`, nodemon also infers the file extension from the script path and watches for files with that extension automatically.
+
+<Tip>
+  Use `--exec` for one-off runs or when you do not want to commit language
+  config to `nodemon.json`. Use `execMap` for executables you rely on
+  regularly.
+</Tip>
+
+## Adding support for a new language
+
+<Steps>
+  <Step title="Identify the file extension and executable">
+    Determine the file extension your scripts use and the command to run them. For example, `.pl` files are run with `perl`.
+  </Step>
+
+  <Step title="Add the mapping to nodemon.json">
+    Open your global `~/nodemon.json` (or a local `nodemon.json`) and add the extension to `execMap`:
+
+    ```json
+    {
+      "execMap": {
+        "pl": "perl"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Run your script with nodemon">
+    nodemon now knows how to execute `.pl` files without needing `--exec`:
+
+    ```bash
+    nodemon script.pl
+    ```
+  </Step>
+</Steps>

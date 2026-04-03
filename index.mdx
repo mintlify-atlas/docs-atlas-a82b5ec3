@@ -1,97 +1,75 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Nodemon"
+description: "Automatically restart your Node.js application when file changes are detected — zero config required."
 ---
 
-## Setting up
+Nodemon is a drop-in replacement for the `node` command that watches your project files and restarts your application automatically whenever you save a change. No code modifications needed — just swap `node` for `nodemon` and get instant feedback during development.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install nodemon globally or as a dev dependency in seconds
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with your first nodemon command
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Configuration" icon="gear" href="/configuration/config-file">
+    Customize watch paths, ignored files, extensions, and more
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="CLI Reference" icon="terminal" href="/cli/options">
+    Full reference for every command-line flag and option
   </Card>
-</Columns>
+  <Card title="Programmatic API" icon="code" href="/api/overview">
+    Use nodemon as a module inside your Node.js scripts
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/faq">
+    Solutions to common issues and frequently asked questions
+  </Card>
+</CardGroup>
 
-## Create beautiful pages
+## How it works
 
-Everything you need to create world-class documentation.
+<Steps>
+  <Step title="Install nodemon">
+    Install globally via npm, yarn, or pnpm — or add it as a dev dependency in your project.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    ```bash
+    npm install -g nodemon
+    ```
+  </Step>
+  <Step title="Replace node with nodemon">
+    Use nodemon exactly like `node`. Pass your entry file and any arguments your app needs.
 
-## Need inspiration?
+    ```bash
+    nodemon server.js
+    ```
+  </Step>
+  <Step title="Edit your code">
+    Make changes to any watched file. Nodemon detects the change and automatically restarts your process.
+  </Step>
+  <Step title="Customize as needed">
+    Add a `nodemon.json` config file to control which files are watched, which are ignored, restart delays, and more.
+  </Step>
+</Steps>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Zero configuration" icon="bolt">
+    Works out of the box with any Node.js app. Just replace `node` with `nodemon`.
+  </Card>
+  <Card title="Flexible file watching" icon="eye">
+    Watch specific directories, file extensions, or glob patterns using `--watch` and `--ext`.
+  </Card>
+  <Card title="Non-Node.js scripts" icon="file-code">
+    Run Python, Ruby, or any other language with `--exec`. Nodemon monitors the right file types automatically.
+  </Card>
+  <Card title="Programmatic API" icon="plug">
+    Integrate nodemon into your build tools, scripts, or custom tooling via its Node.js module API.
+  </Card>
+  <Card title="Event hooks" icon="bell">
+    Trigger shell commands or custom scripts on `start`, `restart`, `crash`, and `quit` events.
+  </Card>
+  <Card title="Docker & network support" icon="server">
+    Legacy polling mode (`-L`) enables reliable watching in containers and over mounted network drives.
+  </Card>
+</CardGroup>

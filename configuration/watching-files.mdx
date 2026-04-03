@@ -1,0 +1,102 @@
+---
+title: "Watching files"
+description: "Control which files and directories nodemon monitors for changes."
+---
+
+By default, nodemon watches the current working directory and restarts your application whenever a relevant file changes. You can narrow or expand the watch scope using the `--watch` flag and filter by extension using `--ext`.
+
+## Default behavior
+
+When you run nodemon without any watch options, it monitors the current working directory recursively. There is no need to explicitly include subdirectories — nodemon traverses them automatically.
+
+```bash
+nodemon server.js
+```
+
+The default file extensions nodemon watches are:
+
+- `.js`
+- `.mjs`
+- `.cjs`
+- `.json`
+
+When the entry script is a CoffeeScript file (`.coffee` or `.litcoffee`), nodemon also adds `.coffee` and `.litcoffee` to the watch list automatically.
+
+## Watching specific paths
+
+Use `--watch` (or `-w`) to restrict watching to one or more specific paths. Pass the flag multiple times to add more paths:
+
+```bash
+nodemon --watch app --watch libs app/server.js
+```
+
+In this example, nodemon only restarts when files inside `./app` or `./libs` change. All other directories are ignored.
+
+You can also set `watch` in `nodemon.json`:
+
+```json nodemon.json
+{
+  "watch": ["app/", "libs/"]
+}
+```
+
+## Glob patterns
+
+nodemon supports Unix globbing in watch paths. Always quote glob patterns in the shell to prevent the shell from expanding them before nodemon sees them:
+
+```bash
+nodemon --watch './lib/*'
+```
+
+<Warning>
+  Glob patterns must use `**` for correct recursive matching. A pattern like
+  `'./lib/*'` only matches files directly inside `lib/`, not files in
+  subdirectories. Use `'./lib/**/*'` to match all files recursively.
+
+  For advanced glob syntax, refer to the
+  [picomatch documentation](https://github.com/micromatch/picomatch#advanced-globbing),
+  the library nodemon uses internally via chokidar.
+</Warning>
+
+## Filtering by extension
+
+Use `-e` (or `--ext`) to specify which file extensions trigger a restart. Provide a comma-separated list:
+
+```bash
+nodemon -e js,pug
+```
+
+nodemon will now restart on any `.js` or `.pug` file change within the watched directories.
+
+You can combine `--ext` with `--watch` to watch specific paths for specific extensions:
+
+```bash
+nodemon --watch src -e ts,tsx src/index.ts
+```
+
+Set `ext` in `nodemon.json` to make this permanent:
+
+```json nodemon.json
+{
+  "ext": "js,mjs,json,pug"
+}
+```
+
+<Note>
+  When you use `--exec` to run a non-Node script (for example,
+  `nodemon --exec python app.py`), nodemon automatically infers the extension
+  from the script filename and watches for `.py` files. You can still override
+  this with `-e`.
+</Note>
+
+## Example: full watch config
+
+The following `nodemon.json` watches two directories, filters to specific extensions, and uses verbose logging to show which file triggered a restart:
+
+```json nodemon.json
+{
+  "watch": ["src/", "config/"],
+  "ext": "js,mjs,json,yaml",
+  "verbose": true
+}
+```

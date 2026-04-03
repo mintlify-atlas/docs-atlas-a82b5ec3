@@ -1,0 +1,114 @@
+---
+title: "Programmatic API overview"
+description: "Use nodemon as a required Node.js module to monitor and restart your application programmatically, with full access to events and configuration."
+---
+
+Since v1.0.0, nodemon can be required directly as a Node.js module. This lets you embed nodemon into your own tooling, extend its behaviour with event listeners, and control it programmatically.
+
+## Basic usage
+
+Require nodemon and call it with a configuration object:
+
+```js
+var nodemon = require('nodemon');
+
+nodemon({
+  script: 'app.js',
+  ext: 'js json'
+});
+
+nodemon.on('start', function () {
+  console.log('App has started');
+}).on('quit', function () {
+  console.log('App has quit');
+  process.exit();
+}).on('restart', function (files) {
+  console.log('App restarted due to: ', files);
+});
+```
+
+## Calling nodemon
+
+The `nodemon` function accepts either a configuration object or a string of CLI arguments.
+
+<CodeGroup>
+
+```js object config
+var nodemon = require('nodemon');
+
+nodemon({
+  script: 'app.js',
+  ext: 'js json'
+});
+```
+
+```js string args
+var nodemon = require('nodemon');
+
+nodemon('-e "js json" app.js');
+```
+
+</CodeGroup>
+
+When a string is passed, nodemon parses it exactly as it would parse command-line arguments.
+
+## TypeScript
+
+nodemon ships with TypeScript types. Import it using the standard CommonJS-compatible import:
+
+<CodeGroup>
+
+```ts CommonJS
+const nodemon = require('nodemon');
+```
+
+```ts ES module (via type import)
+import nodemon = require('nodemon');
+import type { NodemonSettings, NodemonEventLog } from 'nodemon';
+```
+
+</CodeGroup>
+
+## Event chaining
+
+All event-registration methods return the `nodemon` object, so you can chain calls:
+
+```js
+nodemon({ script: 'app.js' })
+  .on('start', function () {
+    console.log('nodemon started');
+  })
+  .on('quit', function () {
+    console.log('nodemon quit');
+    process.exit();
+  })
+  .on('restart', function (files) {
+    console.log('App restarted due to: ', files);
+  });
+```
+
+## Methods and properties
+
+### Event handling
+
+nodemon exposes the internal event-emitter bus at the top level:
+
+| Method | Signature | Description |
+|---|---|---|
+| `nodemon.on` | `(event, fn) => Nodemon` | Subscribe to an event. Alias: `addListener`. |
+| `nodemon.addListener` | `(event, fn) => Nodemon` | Alias for `nodemon.on`. |
+| `nodemon.once` | `(event, fn) => Nodemon` | Subscribe once; handler is removed after first invocation. |
+| `nodemon.emit` | `(event, data?) => Nodemon` | Emit an event on the bus (e.g. force a restart or quit). |
+| `nodemon.removeAllListeners` | `(event?) => Nodemon` | Remove all listeners registered via `nodemon.on`. |
+
+### Utilities
+
+| Method / Property | Description |
+|---|---|
+| `nodemon.reset(callback)` | Reverts nodemon's internal state to a clean slate. |
+| `nodemon.restart()` | Programmatically restart the child process. |
+| `nodemon.config` | Reference to the internal configuration object nodemon is using. |
+
+<Note>
+nodemon can only be required once per process — its config variables are static. However, you can re-run nodemon with new settings after calling `nodemon.reset()` to monitor a different application.
+</Note>

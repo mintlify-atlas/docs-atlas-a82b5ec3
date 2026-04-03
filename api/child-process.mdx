@@ -1,0 +1,125 @@
+---
+title: "Using as child process"
+description: "Spawn nodemon as a child process and communicate with it over IPC, receiving events as messages and sending commands with send()."
+---
+
+In addition to requiring nodemon as a module, you can spawn it as a child process using Node's `child_process` module. Communication happens over IPC (inter-process communication) rather than an event emitter.
+
+<Note>
+When nodemon is **required**, it emits events via an EventEmitter and you call `nodemon.on()` to listen. When nodemon is **spawned**, it sends `message` events over IPC and you call `app.send()` to issue commands. The event names are the same in both cases.
+</Note>
+
+## The `ipc` stdio requirement
+
+To enable two-way communication, you must include `'ipc'` as the fourth stdio channel when spawning nodemon:
+
+```js
+stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+```
+
+Without this, `process.send` will not be available inside the nodemon process and no message events will be received.
+
+## Complete example
+
+```js
+const { spawn } = require('child_process');
+
+function spawnNodemon() {
+  const cp = spawn('nodemon', ['path/to/file.js', '--watch', 'path/to/watch'], {
+    // The 4th element 'ipc' enables process.send() inside nodemon,
+    // allowing it to communicate back with the parent process.
+    // https://nodejs.org/api/child_process.html#child_process_options_stdio
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+  });
+
+  return cp;
+}
+
+var app = spawnNodemon();
+
+app.on('message', function (event) {
+  if (event.type === 'start') {
+    console.log('nodemon started');
+  } else if (event.type === 'crash') {
+    console.log('script crashed for some reason');
+  }
+});
+
+// Force a restart
+app.send('restart');
+
+// Force nodemon to quit
+app.send('quit');
+```
+
+## Receiving events
+
+nodemon emits `message` events on the child process object. Each event has a `type` field that corresponds to the same event names available in the module API:
+
+| `event.type` | When it fires |
+|---|---|
+| `start` | Child process has started |
+| `crash` | Child process has crashed |
+| `exit` | Child process has cleanly exited |
+| `restart` | Child process has restarted |
+| `config:update` | nodemon's config has changed |
+| `log` | Log message from nodemon |
+| `readable` | stdout and stderr streams are ready |
+| `stdout` | stdout chunk from child process |
+| `stderr` | stderr chunk from child process |
+
+```js
+app.on('message', function (event) {
+  if (event.type === 'start') {
+    console.log('nodemon started');
+  } else if (event.type === 'crash') {
+    console.log('script crashed for some reason');
+  } else if (event.type === 'restart') {
+    console.log('script restarted');
+  }
+});
+```
+
+## Sending commands
+
+Use `app.send()` to send commands to nodemon:
+
+```js
+// Trigger a restart
+app.send('restart');
+
+// Quit nodemon
+app.send('quit');
+```
+
+## Listening for quit
+
+Even though nodemon emits a `message` event with `type: 'exit'` when the child process exits, it is more reliable to listen for the `exit` event on the spawned process itself when detecting that nodemon has quit:
+
+```js
+app.on('exit', function () {
+  console.log('nodemon quit');
+});
+```
+
+<Warning>
+Do not rely solely on `app.on('message', ...)` with `type: 'exit'` to detect that nodemon has stopped. Listen to the `exit` event on the child process object instead.
+</Warning>
+
+## Using `fork` instead of `spawn`
+
+The same IPC pattern works with `fork` and other `child_process` functions. The key requirement is always the `'ipc'` stdio entry:
+
+```js
+const { fork } = require('child_process');
+
+const app = fork(
+  require.resolve('nodemon/bin/nodemon'),
+  ['path/to/file.js'],
+  { stdio: ['pipe', 'pipe', 'pipe', 'ipc'] }
+);
+
+app.on('message', function (event) {
+  console.log('nodemon event:', event.type);
+});
+```

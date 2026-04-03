@@ -1,0 +1,89 @@
+---
+title: "Kill signals"
+description: "How nodemon signals child processes to restart, and how to handle signals gracefully in your application."
+---
+
+When nodemon detects a file change, it sends a kill signal to the child process to trigger a restart. Understanding how signals work lets you handle restarts gracefully — for example, to close database connections or flush in-flight requests before the process exits.
+
+## Default signal
+
+For Node.js processes, nodemon sends **`SIGUSR2`** by default. This signal is chosen deliberately so that your application can intercept it and perform cleanup before the process is replaced.
+
+## Changing the signal
+
+Use the `--signal` flag to send a different signal:
+
+```bash
+nodemon --signal SIGHUP server.js
+```
+
+You can also set this in `nodemon.json`:
+
+```json
+{
+  "signal": "SIGHUP"
+}
+```
+
+<Note>
+  nodemon sends the signal to **every process in the process tree**, not just the top-level process. Keep this in mind when using cluster or spawning child processes of your own.
+</Note>
+
+## Handling signals in your application
+
+### Basic signal handler
+
+Your application can listen for the signal and perform cleanup before terminating:
+
+```js
+process.on("SIGHUP", function () {
+  reloadSomeConfiguration();
+  process.kill(process.pid, "SIGTERM");
+});
+```
+
+<Warning>
+  `process.kill` must be called **only after** your shutdown jobs are complete. Calling it too early will terminate the process before cleanup finishes.
+</Warning>
+
+### Graceful shutdown with SIGUSR2
+
+Because nodemon uses `SIGUSR2` by default, you can capture it to run a graceful shutdown sequence:
+
+```js
+// Use `on` rather than `once` — nodemon may re-send the signal across multiple restarts
+process.on('SIGUSR2', function () {
+  gracefulShutdown(function () {
+    process.kill(process.pid, 'SIGTERM');
+  });
+});
+```
+
+This pattern lets each restart go through your shutdown logic (closing servers, draining queues, etc.) before nodemon brings the process back up.
+
+## Cluster signal forwarding
+
+When using Node's `cluster` module, all worker processes receive the signal along with the master. A common pattern is to catch the signal in the master process and forward `SIGTERM` to each worker, while having workers ignore the original signal:
+
+```js
+if (cluster.isMaster) {
+  process.on("SIGHUP", function () {
+    for (const worker of Object.values(cluster.workers)) {
+      worker.process.kill("SIGTERM");
+    }
+  });
+} else {
+  // Workers ignore SIGHUP so only the master coordinates shutdown
+  process.on("SIGHUP", function () {});
+}
+```
+
+## Exiting on crash with `--exitcrash`
+
+By default, nodemon keeps watching after a script crash and will restart it on the next file change. The `--exitcrash` flag changes this behaviour: nodemon exits immediately when the monitored script crashes.
+
+```bash
+nodemon --exitcrash server.js
+```
+
+This is useful when nodemon runs under a process supervisor such as `forever` or `pm2`, which can then handle the restart logic itself rather than letting nodemon silently keep a crashed process under watch.

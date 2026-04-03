@@ -1,0 +1,227 @@
+---
+title: "Events"
+description: "Reference for all events emitted by nodemon when used as a required module, including listener signatures and usage examples."
+---
+
+When nodemon is required as a module, it exposes an event emitter. You can subscribe to events with `nodemon.on()`, `nodemon.once()`, or `nodemon.addListener()`, and you can emit commands back to nodemon with `nodemon.emit()`.
+
+```js
+var nodemon = require('nodemon');
+
+nodemon({ script: 'app.js' })
+  .on('start', function () {
+    console.log('nodemon started');
+  })
+  .on('crash', function () {
+    console.log('script crashed for some reason');
+  });
+```
+
+## Child process state events
+
+### start
+
+Fires when the child process is started (or restarted).
+
+**Listener signature:** `() => void`
+
+```js
+nodemon.on('start', function () {
+  console.log('App has started');
+});
+```
+
+---
+
+### crash
+
+Fires when the child process crashes unexpectedly. nodemon does **not** emit `exit` after a crash — only `crash`.
+
+**Listener signature:** `() => void`
+
+```js
+nodemon.on('crash', function () {
+  console.log('Script crashed for some reason');
+});
+```
+
+---
+
+### exit
+
+Fires when the child process exits cleanly (no crash). This event is not emitted after a crash; listen to `crash` for that case.
+
+**Listener signature:** `(exitCode?: number) => void`
+
+```js
+nodemon.on('exit', function (code) {
+  console.log('Script exited with code', code);
+});
+```
+
+---
+
+### restart
+
+Fires when nodemon restarts the child process due to a file change. The listener receives an array of the files that triggered the restart.
+
+**Listener signature:** `(files?: string[]) => void`
+
+```js
+nodemon.on('restart', function (files) {
+  console.log('App restarted due to:', files);
+});
+```
+
+## Nodemon lifecycle events
+
+### quit
+
+Fires when nodemon itself is quitting. The listener may receive an exit code: `143` (SIGTERM) or `130` (SIGINT).
+
+**Listener signature:** `(e?: 143 | 130) => void`
+
+```js
+nodemon.on('quit', function (code) {
+  console.log('Nodemon quit with code', code);
+  process.exit();
+});
+```
+
+---
+
+### config:update
+
+Fires when nodemon's internal configuration changes.
+
+**Listener signature:** `(e?: NodemonEventConfig) => void`
+
+The `NodemonEventConfig` object contains:
+
+<ResponseField name="run" type="boolean">
+  Whether nodemon is currently running a child process.
+</ResponseField>
+
+<ResponseField name="required" type="boolean">
+  Whether nodemon is being used as a required module.
+</ResponseField>
+
+<ResponseField name="dirs" type="string[]">
+  Directories currently being watched.
+</ResponseField>
+
+<ResponseField name="timeout" type="number">
+  The restart delay in milliseconds.
+</ResponseField>
+
+<ResponseField name="options" type="NodemonConfig">
+  The resolved options nodemon is using.
+</ResponseField>
+
+<ResponseField name="lastStarted" type="number">
+  Timestamp (ms since epoch) of the last child process start.
+</ResponseField>
+
+<ResponseField name="loaded" type="string[]">
+  Config files that were loaded and merged.
+</ResponseField>
+
+```js
+nodemon.on('config:update', function (config) {
+  console.log('Config updated, watching:', config.dirs);
+});
+```
+
+## Log and stream events
+
+### log
+
+Fires for all log messages emitted by nodemon itself (not by the child process). In non-verbose mode only `log`, `status`, `error`, and `fail` type messages are emitted. With `verbose: true`, `detail` messages are also emitted.
+
+**Listener signature:** `(e: NodemonEventLog) => void`
+
+<ResponseField name="type" type="'detail' | 'log' | 'status' | 'error' | 'fail'">
+  The log level. `detail` requires `verbose: true`. `fail` indicates the child process is crashing. `error` is a nodemon system error.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Plain text log message.
+</ResponseField>
+
+<ResponseField name="colour" type="string">
+  The same message with terminal escape codes and the `[nodemon]` prefix added.
+</ResponseField>
+
+```js
+nodemon.on('log', function (e) {
+  console.log(e.colour); // prints "[nodemon] ..." with colour codes
+});
+```
+
+---
+
+### readable
+
+Fires when the child process's stdout and stderr streams are ready to be consumed. This event is only emitted when `stdout: false` is set in the nodemon configuration.
+
+**Listener signature:** `() => void`
+
+Use this event to pipe the child process output to another destination:
+
+```js
+var fs = require('fs');
+var nodemon = require('nodemon');
+
+nodemon({
+  script: 'app.js',
+  stdout: false // important: tells nodemon not to output to console
+}).on('readable', function () {
+  // `this` refers to the nodemon instance
+  this.stdout.pipe(fs.createWriteStream('output.txt'));
+  this.stderr.pipe(fs.createWriteStream('err.txt'));
+});
+```
+
+---
+
+### stdout
+
+Fires for each chunk of stdout output from the child process. Requires `stdout: false` in the nodemon configuration.
+
+**Listener signature:** `(e: string) => void`
+
+```js
+nodemon({ script: 'app.js', stdout: false }).on('stdout', function (data) {
+  process.stdout.write(data);
+});
+```
+
+---
+
+### stderr
+
+Fires for each chunk of stderr output from the child process.
+
+**Listener signature:** `(e: string) => void`
+
+```js
+nodemon({ script: 'app.js', stdout: false }).on('stderr', function (data) {
+  process.stderr.write(data);
+});
+```
+
+## Emitting commands
+
+You can emit events back to nodemon to trigger behaviour programmatically:
+
+```js
+// Force a restart
+nodemon.emit('restart');
+
+// Force nodemon to quit
+nodemon.emit('quit');
+```
+
+<Note>
+`nodemon.emit('restart')` triggers the same restart path as a file change. `nodemon.emit('quit')` causes nodemon to stop watching and exit.
+</Note>

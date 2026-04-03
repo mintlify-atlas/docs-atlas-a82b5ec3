@@ -1,0 +1,62 @@
+---
+title: "Introduction"
+description: "nodemon is a development tool that automatically restarts your Node.js application whenever file changes are detected."
+---
+
+nodemon is a drop-in replacement for the `node` command. It monitors your project files and restarts your process whenever you save a change — no code modifications required, no additional configuration needed to get started.
+
+```bash
+# Before nodemon
+node server.js
+
+# With nodemon
+nodemon server.js
+```
+
+Any output your application produces is passed through unchanged. Lines prefixed with `[nodemon]` are nodemon's own status messages.
+
+## Why use nodemon
+
+During development, manually stopping and restarting a Node.js process after every change is repetitive and slows down your feedback loop. nodemon eliminates that step entirely. Save a file, and your app is already running the updated code.
+
+nodemon also handles processes that exit cleanly — not just hanging servers. If your script exits on its own, nodemon continues watching and will restart it when files change again.
+
+<Note>
+  nodemon requires no changes to your application code. It is a wrapper around the `node` executable, not a library you import.
+</Note>
+
+## Design principles
+
+nodemon is guided by a small set of principles that keep it reliable and predictable:
+
+- **Fewer flags is better** — the defaults cover most use cases without extra configuration
+- **Works across all platforms** — consistent behavior on macOS, Windows, and Linux
+- **Fewer features** — a focused tool rather than an all-in-one solution
+- **Let individuals build on top of nodemon** — extensible via config files, events, and a programmatic API
+- **Offer all CLI functionality as an API** — everything available on the command line is also available when using nodemon as a module
+- **Contributions must have and pass tests** — reliability over feature count
+
+## CLI tool and programmatic module
+
+nodemon works in two modes:
+
+**CLI tool** — the primary way to use nodemon. Replace `node` with `nodemon` on the command line:
+
+```bash
+nodemon ./server.js localhost 8080
+```
+
+**Programmatic module** — use nodemon inside your own Node.js scripts or build tools by requiring it directly. This gives you full control over configuration and lets you respond to nodemon's lifecycle events.
+
+Both modes share the same underlying options, so anything you can do from the command line is also possible through the API.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install nodemon globally or as a dev dependency
+  </Card>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Run your first command and learn the basics
+  </Card>
+</CardGroup>

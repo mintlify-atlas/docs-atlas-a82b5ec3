@@ -1,0 +1,85 @@
+---
+title: "Graceful shutdown"
+description: "Handle nodemon restart signals to cleanly shut down your application before it restarts."
+---
+
+When nodemon detects a file change, it sends a kill signal to your running process to trigger a restart. By default, nodemon uses `SIGUSR2` for Node.js processes. You can intercept this signal to run cleanup tasks — closing database connections, flushing buffers, or finishing in-flight requests — before the process exits.
+
+## Capturing the restart signal
+
+Use `process.on('SIGUSR2', ...)` to intercept the restart signal. Call `process.kill` to exit only after your cleanup is complete:
+
+```js
+// Important: use `on`, not `once` — nodemon can re-send the signal
+process.on('SIGUSR2', function () {
+  gracefulShutdown(function () {
+    process.kill(process.pid, 'SIGTERM');
+  });
+});
+```
+
+<Warning>
+  Only call `process.kill` after your shutdown tasks are fully complete. If you exit prematurely, open connections or pending writes may be lost.
+</Warning>
+
+<Note>
+  Use `process.on` rather than `process.once`. Nodemon may re-send the kill signal, and `once` would leave subsequent restarts unhandled.
+</Note>
+
+## Using a custom signal
+
+You can instruct nodemon to send a different signal using the `--signal` flag:
+
+```bash
+nodemon --signal SIGHUP server.js
+```
+
+Your application handles it the same way:
+
+```js
+process.on("SIGHUP", function () {
+  reloadSomeConfiguration();
+  process.kill(process.pid, "SIGTERM");
+});
+```
+
+The signal is sent to **every process in the process tree**, including any child processes your app has spawned.
+
+## Graceful shutdown with Node.js clusters
+
+When using the `cluster` module, both master and workers receive the signal. A common pattern is to catch the signal in the master and forward `SIGTERM` to workers, while workers ignore it:
+
+```js
+if (cluster.isMaster) {
+  process.on("SIGHUP", function () {
+    for (const worker of Object.values(cluster.workers)) {
+      worker.process.kill("SIGTERM");
+    }
+  });
+} else {
+  // Workers ignore SIGHUP — master handles it
+  process.on("SIGHUP", function () {});
+}
+```
+
+## Configuring the signal in nodemon.json
+
+You can set the signal in your config file so it applies without a CLI flag:
+
+```json nodemon.json
+{
+  "signal": "SIGHUP"
+}
+```
+
+## Working with process managers
+
+If you use nodemon alongside a process manager like [forever](https://github.com/foreverjs/forever), use the `--exitcrash` flag so nodemon exits when the script crashes, allowing the manager to take over:
+
+```bash
+forever start --uid myapp --killSignal=SIGTERM -c 'nodemon --exitcrash' server.js
+```
+
+<Tip>
+  `--exitcrash` makes nodemon exit on crash rather than waiting for file changes, which is what process managers expect.
+</Tip>

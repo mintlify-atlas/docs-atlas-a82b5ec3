@@ -1,0 +1,333 @@
+---
+title: "Common issues"
+description: "In-depth troubleshooting guides for the most frequently encountered nodemon problems, organized by category."
+---
+
+## Files not being detected
+
+When nodemon isn't picking up your file changes, there are several common causes to work through.
+
+### Enable verbose mode first
+
+Before trying other fixes, run nodemon with `--verbose` (or `-V`) to see exactly what is being watched and what ignore rules are active:
+
+```bash
+nodemon --verbose app.js
+```
+
+The output will show:
+- Which config files were loaded
+- Which ignore rules are in effect
+- Which file extensions are being watched
+- The paths nodemon is monitoring
+
+This is the fastest way to understand why a change might be getting filtered out.
+
+### Check ignore rules
+
+nodemon ignores `.git`, `node_modules`, `bower_components`, `.nyc_output`, `coverage`, and `.sass-cache` by default. Your custom ignore rules are **merged** with these defaults, not replacing them.
+
+If a file is in an ignored directory, it will never trigger a restart regardless of watch rules — ignore always wins.
+
+To check your effective ignore configuration, use `--dump`:
+
+```bash
+nodemon --dump
+```
+
+This prints the full resolved configuration including all merged ignore rules.
+
+### Check inotify limits on Linux
+
+On Linux, the kernel limits how many file system watches can be open at once. If nodemon reports watching zero files or misses changes, you may have hit this limit.
+
+Increase the inotify watch limit:
+
+```bash
+echo fs.inotify.max_user_watches=582222 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+This change persists across reboots.
+
+### Use legacy watch mode
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    If native file system events aren't working (common in virtualized or network-mounted file systems), enable polling mode:
+
+    ```bash
+    nodemon --legacy-watch app.js
+    # or using the short alias
+    nodemon -L app.js
+    ```
+
+    To make this permanent, add it to `nodemon.json`:
+
+    ```json
+    {
+      "legacyWatch": true
+    }
+    ```
+  </Tab>
+  <Tab title="Windows">
+    On Windows, a known OS-level issue can cause Chokidar (nodemon's file watcher) to fire spurious change events, making nodemon restart in a loop with no actual file changes.
+
+    Run this command with administrator privileges to disable last-access time tracking:
+
+    ```bash
+    fsutil behavior set disablelastaccess 1
+    ```
+
+    If the issue persists after that fix, fall back to polling mode:
+
+    ```bash
+    nodemon --legacy-watch app.js
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Legacy watch mode polls every file it can find on an interval. It is more CPU and I/O intensive than native watching. Use it only when native watch events are unavailable or unreliable.
+</Warning>
+
+---
+
+## Application not restarting
+
+If nodemon is running but your app doesn't restart after saving a file, the most likely causes are extension filtering or ignore rules.
+
+### Verify the file extension is being watched
+
+By default, nodemon only watches files with these extensions: `.js`, `.mjs`, `.coffee`, `.litcoffee`, `.json`.
+
+If you're editing a `.ts`, `.css`, `.html`, or other file type, nodemon won't react unless you tell it to. Add extensions with `-e` (or `--ext`):
+
+```bash
+nodemon -e js,ts,css,html app.js
+```
+
+Or in `nodemon.json`:
+
+```json
+{
+  "ext": "js,ts,css,html"
+}
+```
+
+To watch every file type regardless of extension:
+
+```bash
+nodemon --ext '*' app.js
+```
+
+### Check ignore rules with verbose output
+
+Run with `--verbose` to confirm whether the changed file is matching an ignore rule:
+
+```bash
+nodemon --verbose app.js
+```
+
+When a file change occurs, verbose mode shows which rule matched and whether it resulted in a restart or was filtered out:
+
+```text
+[nodemon] files triggering change check: ./src/style.css
+[nodemon] matched rule: **/*.css
+[nodemon] changes after filters (before/after): 1/1
+[nodemon] restarting due to changes...
+```
+
+If the file appears in the trigger check but doesn't cause a restart, an ignore rule is blocking it.
+
+### Dump the full configuration
+
+Use `--dump` to print the complete resolved nodemon configuration, including all watch paths, extensions, and ignore rules:
+
+```bash
+nodemon --dump
+```
+
+This is useful when config is spread across `nodemon.json`, `package.json`, and command-line flags and you need to see the final merged result.
+
+---
+
+## Permission errors on install
+
+### Global install with sudo
+
+If installing nodemon globally fails with a permission error related to `gyp`:
+
+```
+gyp WARN EACCES user "root" does not have permission to access the dev dir "<some-local-dir>"
+```
+
+Re-run with `--unsafe-perm`:
+
+```bash
+sudo npm install -g nodemon --unsafe-perm
+```
+
+### Use nvm (recommended)
+
+The root cause of most global install permission issues is that Node.js was installed system-wide and npm's global directory is owned by root. The recommended fix is to use [nvm](https://github.com/nvm-sh/nvm) to manage Node.js:
+
+<Steps>
+  <Step title="Install nvm">
+    ```bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    ```
+  </Step>
+  <Step title="Install Node.js via nvm">
+    ```bash
+    nvm install --lts
+    nvm use --lts
+    ```
+  </Step>
+  <Step title="Install nodemon globally (no sudo needed)">
+    ```bash
+    npm install -g nodemon
+    ```
+  </Step>
+</Steps>
+
+With nvm, Node.js and global packages are installed in your home directory, so no elevated permissions are required.
+
+### Use npx to avoid global install entirely
+
+If you don't want to install nodemon globally, run it directly with `npx`:
+
+```bash
+npx nodemon app.js
+```
+
+`npx` downloads and runs the package without a global install. You can also add it to your `package.json` scripts for convenience:
+
+```json
+{
+  "scripts": {
+    "dev": "nodemon app.js"
+  }
+}
+```
+
+Then run with `npm run dev`. Local `node_modules/.bin` is on the path automatically when npm runs scripts.
+
+---
+
+## Windows-specific issues
+
+### "scripts is disabled on this system" (PowerShell ExecutionPolicy)
+
+If running `nodemon` in PowerShell produces:
+
+```
+nodemon : File C:\…\nodemon.ps1 cannot be loaded because running scripts is disabled on this system.
+```
+
+PowerShell's execution policy is blocking the nodemon script. Fix it by opening PowerShell as an administrator and running:
+
+```powershell
+Set-ExecutionPolicy remotesigned
+```
+
+The `remotesigned` policy allows local scripts to run and requires downloaded scripts to be signed by a trusted publisher.
+
+<Tip>
+  To check your current policy before changing it, run `Get-ExecutionPolicy`.
+</Tip>
+
+### Restart loop with no file changes (fsevents / chokidar issue)
+
+A Windows OS update can break the `fsevents` module used by Chokidar, causing spurious file change events that make nodemon restart continuously even when nothing changed.
+
+Run the following command as an administrator:
+
+```bash
+fsutil behavior set disablelastaccess 1
+```
+
+This disables last-access timestamp updates on files, which is the underlying trigger for the false change events.
+
+<Note>
+  You may need to restart your machine after running this command for the change to take effect.
+</Note>
+
+---
+
+## Docker issues
+
+### No automatic restart with Docker volumes
+
+Some Node.js Docker images don't include the full suite of filesystem process utilities that nodemon needs to detect changes in mounted volumes. Install the `procps` package to resolve this:
+
+```dockerfile
+FROM node:18-slim
+RUN apt-get update && apt-get install -y procps
+```
+
+This enables automatic restarts without requiring legacy watch mode.
+
+### Use legacy watch mode as a fallback
+
+If installing `procps` isn't an option, or if you're still not seeing restarts, fall back to polling mode:
+
+```bash
+nodemon --legacy-watch app.js
+```
+
+Or in your `nodemon.json`:
+
+```json
+{
+  "legacyWatch": true
+}
+```
+
+### "Port in use" with --inspect and Docker
+
+When using Node's `--inspect` debugger flag inside Docker, the debug port can remain open after a restart, preventing the new process from binding to it.
+
+Use [kill-port](https://github.com/tiaanduplessis/kill-port) to release the port before each restart:
+
+```bash
+nodemon --delay 80ms --exec 'kill-port -k 9228/tcp; node --inspect=0.0.0.0:9228 ./app/http.js'
+```
+
+Alternatively, add a restart event to `nodemon.json` to kill the debug port automatically on every restart:
+
+```json
+{
+  "events": {
+    "restart": "sh -c 'lsof -i :${PORT:-9229} -t | xargs kill'"
+  }
+}
+```
+
+<Warning>
+  The event-based `lsof` workaround may occasionally fail. It's a best-effort fix — if reliability is critical, prefer the `kill-port` approach or restructure your graceful shutdown to avoid async operations in the `SIGUSR2` handler.
+</Warning>
+
+### Graceful shutdown and --inspect conflicts
+
+If your app has an async graceful shutdown (for example, awaiting a database disconnect on `SIGUSR2`), nodemon may try to start the new process before the old one finishes releasing the debug port:
+
+```js
+// This can cause the port conflict
+process.on('SIGUSR2', async () => {
+  await db.disconnect();
+  process.kill(process.pid, 'SIGTERM');
+});
+```
+
+Removing the `await` so the shutdown is synchronous often resolves the conflict:
+
+```js
+process.on('SIGUSR2', () => {
+  db.disconnect(); // fire and forget
+  process.kill(process.pid, 'SIGTERM');
+});
+```
+
+<Note>
+  Use `process.on` (not `process.once`) for `SIGUSR2` so the handler remains registered across multiple nodemon restarts.
+</Note>

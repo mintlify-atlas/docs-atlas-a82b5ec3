@@ -1,0 +1,243 @@
+---
+title: "Config file"
+description: "Configure nodemon using a nodemon.json file, package.json, or the command line."
+---
+
+nodemon supports local and global configuration files. These are usually named `nodemon.json` and can be located in the current working directory or in your home directory. You can also specify an alternate config file with the `--config` flag.
+
+## Config file location
+
+nodemon looks for configuration in the following locations, in order:
+
+1. A file passed via `--config <file>`
+2. `nodemon.json` in the current working directory
+3. `nodemon.json` in your home directory (`~`)
+
+Any key accepted as a CLI argument can be set as a JSON field in the config file.
+
+## Sample config
+
+The following example shows a `nodemon.json` with a variety of options:
+
+```json nodemon.json
+{
+  "restartable": "rs",
+  "ignore": [
+    ".git",
+    "node_modules/**/node_modules"
+  ],
+  "verbose": true,
+  "execMap": {
+    "js": "node --harmony"
+  },
+  "events": {
+    "restart": "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'"
+  },
+  "watch": [
+    "test/fixtures/",
+    "test/samples/"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "js,json"
+}
+```
+
+## Alternate config file
+
+Use `--config` to point nodemon at any config file path:
+
+```bash
+nodemon --config ./config/nodemon.json server.js
+```
+
+## Config in package.json
+
+If you prefer to keep all configuration in one place, you can embed nodemon config under the `nodemonConfig` key in your `package.json`:
+
+```json package.json
+{
+  "name": "my-app",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
+  "nodemonConfig": {
+    "ignore": ["**/test/**", "**/docs/**"],
+    "delay": 2500
+  }
+}
+```
+
+<Note>
+  If a local `nodemon.json` exists, or if you pass `--config`, nodemon ignores
+  the `nodemonConfig` field in `package.json`.
+</Note>
+
+## Config precedence
+
+Settings are resolved in this order, with earlier sources taking priority:
+
+1. **Command line arguments** — highest priority
+2. **Local config** — `nodemon.json` in the current working directory (or the file passed via `--config`)
+3. **Global config** — `nodemon.json` in your home directory
+
+## Config fields reference
+
+The table below covers all fields available in `NodemonConfig`:
+
+<AccordionGroup>
+  <Accordion title="restartable">
+    The string a user types to manually restart the process. Defaults to `"rs"`. Set to `false` to disable manual restarts via stdin.
+
+    ```json
+    { "restartable": "rs" }
+    ```
+  </Accordion>
+
+  <Accordion title="colours">
+    Enable or disable coloured output. Equivalent to `--no-colors` on the CLI.
+
+    ```json
+    { "colours": false }
+    ```
+  </Accordion>
+
+  <Accordion title="ignore">
+    Glob patterns or paths to exclude from watching. Patterns are matched against the full absolute path.
+
+    ```json
+    { "ignore": ["*.test.js", "**/fixtures/**"] }
+    ```
+  </Accordion>
+
+  <Accordion title="ignoreRoot">
+    Override the default set of ignored root directories. By default nodemon ignores `.git`, `node_modules`, `bower_components`, `.nyc_output`, `coverage`, and `.sass-cache`.
+
+    ```json
+    { "ignoreRoot": [".git"] }
+    ```
+  </Accordion>
+
+  <Accordion title="watch">
+    Paths or glob patterns to watch. By default nodemon watches the current working directory.
+
+    ```json
+    { "watch": ["src/", "lib/"] }
+    ```
+  </Accordion>
+
+  <Accordion title="verbose">
+    Show detail on what is causing restarts. Equivalent to `-V` / `--verbose` on the CLI.
+
+    ```json
+    { "verbose": true }
+    ```
+  </Accordion>
+
+  <Accordion title="signal">
+    The kill signal sent to the child process on restart. Defaults to `SIGUSR2`.
+
+    ```json
+    { "signal": "SIGHUP" }
+    ```
+  </Accordion>
+
+  <Accordion title="stdout">
+    When set to `false`, nodemon does not pipe the child process stdout to its own stdout. Useful when using nodemon as a module and piping output manually.
+
+    ```json
+    { "stdout": false }
+    ```
+  </Accordion>
+
+  <Accordion title="delay">
+    Milliseconds to wait after the last file change before restarting. Equivalent to `--delay` on the CLI (where the CLI value is in seconds).
+
+    ```json
+    { "delay": 2500 }
+    ```
+  </Accordion>
+
+  <Accordion title="legacyWatch">
+    Use Chokidar's polling mode. Required in some networked environments such as Docker with mounted volumes.
+
+    ```json
+    { "legacyWatch": true }
+    ```
+  </Accordion>
+
+  <Accordion title="pollingInterval">
+    Combined with `legacyWatch`, sets the polling interval in milliseconds. Defaults to 100.
+
+    ```json
+    { "legacyWatch": true, "pollingInterval": 500 }
+    ```
+  </Accordion>
+
+  <Accordion title="quiet">
+    Minimise nodemon log output to start/stop messages only. Equivalent to `-q` / `--quiet` on the CLI.
+
+    ```json
+    { "quiet": true }
+    ```
+  </Accordion>
+
+  <Accordion title="exitCrash">
+    Exit nodemon itself when the child process crashes. Allows nodemon to be combined with an external process supervisor.
+
+    ```json
+    { "exitCrash": true }
+    ```
+  </Accordion>
+
+  <Accordion title="noUpdateNotifier">
+    Opt out of the version update check. Equivalent to `--no-update-notifier` on the CLI.
+
+    ```json
+    { "noUpdateNotifier": true }
+    ```
+  </Accordion>
+
+  <Accordion title="cwd">
+    Change into this directory before running the script. Equivalent to `--cwd` on the CLI.
+
+    ```json
+    { "cwd": "/path/to/project" }
+    ```
+  </Accordion>
+
+  <Accordion title="spawn">
+    Force nodemon to use `spawn` instead of `fork` when starting the child process. Only applies to Node scripts.
+
+    ```json
+    { "spawn": true }
+    ```
+  </Accordion>
+
+  <Accordion title="runOnChangeOnly">
+    Do not execute the script on initial startup — only run it when a file change is detected. Equivalent to `-C` / `--on-change-only` on the CLI.
+
+    ```json
+    { "runOnChangeOnly": true }
+    ```
+  </Accordion>
+
+  <Accordion title="execMap">
+    Map file extensions to executables. See [Executable map](/configuration/exec-map) for full details.
+
+    ```json
+    {
+      "execMap": {
+        "rb": "ruby",
+        "pl": "perl"
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  The `.nodemonignore` file was dropped in nodemon 3. Use the `ignore` field in
+  `nodemon.json` or the `--ignore` CLI flag instead.
+</Warning>
